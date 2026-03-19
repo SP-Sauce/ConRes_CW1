@@ -87,4 +87,4 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "javac src/main/java/*.java -d . && java Main"
+args = "mvn compile exec:java"
