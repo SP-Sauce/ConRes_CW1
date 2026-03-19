@@ -1,4 +1,3 @@
-//This is the workshop 3
 class File {
   StringBuffer fileText = new StringBuffer("");
 
@@ -32,7 +31,7 @@ public class Main {
     DatabaseManager.initialize();
 
     System.out.println("App is running with DB capability!");
-    
+
     File file = new File();
     file.initialiseText("");
     ThreadSafeTransaction thread1 = new ThreadSafeTransaction();
