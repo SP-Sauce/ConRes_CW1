@@ -18,7 +18,7 @@ class File {
 class ThreadSafeTransaction extends Thread {
 
   public void Read(File file) {
-    System.out.println(file.getfileText());
+    System.out.println("fileText: " + file.getfileText());
   }
 
   public void Edit(File file, String Text) {
@@ -33,8 +33,9 @@ public class Main {
     file.initialiseText("");
     ThreadSafeTransaction thread1 = new ThreadSafeTransaction();
     ThreadSafeTransaction thread2 = new ThreadSafeTransaction();
-    thread2.Edit(file, "Hi");
-    thread1.Read(file);
-    thread2.Edit(file, "world");
+    thread1.Edit(file, "hello world");
+    thread2.Read(file);
+    thread1.Edit(file, "hello world123 this is new text added");
+    thread2.Read(file);
   }
 }
