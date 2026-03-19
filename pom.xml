@@ -10,5 +10,10 @@
       <version>4.12</version>
       <type>jar</type>
     </dependency>
+    <dependency>
+        <groupId>org.sqlite-jdbc</groupId>
+        <artifactId>sqlite-jdbc</artifactId>
+        <version>3.45.1.0</version>
+    </dependency>
   </dependencies>
 </project>

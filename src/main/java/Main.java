@@ -29,6 +29,10 @@ class ThreadSafeTransaction extends Thread {
 public class Main {
 
   public static void main(String[] args) {
+    DatabaseManager.initialize();
+
+    System.out.println("App is running with DB capability!");
+    
     File file = new File();
     file.initialiseText("");
     ThreadSafeTransaction thread1 = new ThreadSafeTransaction();
