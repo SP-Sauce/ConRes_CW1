@@ -16,10 +16,11 @@ public class DatabaseManager {
         return DriverManager.getConnection(URL);
     }
 
-    public static void initialize() {
+    public static void initialise() {
         String sql = "CREATE TABLE IF NOT EXISTS users (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "username TEXT NOT NULL";
+                "username TEXT NOT NULL UNIQUE" +
+                ")";
 
         try (Connection conn = connect();
                 Statement stmt = conn.createStatement()) {
@@ -31,7 +32,7 @@ public class DatabaseManager {
     }
 
     public static void setup_users() {
-        String sql = "INSERT INTO users (id, username) VALUES" +
+        String sql = "INSERT INTO users (id, username) VALUES " +
                 "(1, 'Ali'), " +
                 "(2, 'Sara'), " +
                 " (3, 'Zain'), " +
@@ -47,4 +48,8 @@ public class DatabaseManager {
         }
     }
 
+    public static void DBsetup() {
+        initialise();
+        setup_users();
+    }
 }
