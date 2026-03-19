@@ -8,6 +8,11 @@ public class DatabaseManager {
     private static final String URL = "jdbc:sqlite:concurrency_demo.db";
 
     public static Connection connect() throws SQLException {
+        try {
+            Class.forName("org.sqlite.JDBC");
+        } catch (ClassNotFoundException e) {
+            throw new SQLException("SQLite driver not found", e);
+        }
         return DriverManager.getConnection(URL);
     }
 
