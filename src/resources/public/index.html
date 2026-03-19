@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Concurrency Demo</title>
+</head>
+<body>
+    <h1>User Database Manager</h1>
+    <button onclick="addUser()">Simulate User Action</button>
+    <div id="status"></div>
+
+    <script>
+        function addUser() {
+            fetch('/add-user')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('status').innerText = data;
+                });
+        }
+    </script>
+</body>
+</html>
