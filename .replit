@@ -90,5 +90,13 @@ task = "shell.exec"
 args = "mvn compile dependency:build-classpath -Dmdep.outputFile=cp.txt -q && java -cp target/classes:$(cat cp.txt) Main"
 
 [[ports]]
+localPort = 3000
+externalPort = 3000
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
+
+[[ports]]
 localPort = 8080
 externalPort = 80

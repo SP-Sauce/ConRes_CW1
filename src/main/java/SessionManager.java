@@ -2,6 +2,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.stream.Collectors;
 
 public class SessionManager {
     private final Semaphore loginSemaphore;
@@ -73,5 +74,17 @@ public class SessionManager {
                 waitingQueue.stream().map(r -> r.getUser().getId()).toList());
         System.out.println("------------------------");
         fileAccessManager.printFileState();
+    }
+
+    public synchronized String getActiveUsersJson() {
+        return activeSessions.values().stream()
+                .map(session -> "\"" + session.getUser().toString() + "\"")
+                .collect(Collectors.joining(",", "[", "]"));
+    }
+
+    public synchronized String getWaitingUsersJson() {
+        return waitingQueue.stream()
+                .map(request -> "\"" + request.getUser().toString() + "\"")
+                .collect(Collectors.joining(",", "[", "]"));
     }
 }

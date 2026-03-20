@@ -129,4 +129,15 @@ public class FileAccessManager {
         System.out.println("Status: " + getFileStatus());
         System.out.println("-----------------------------");
     }
+
+    public String getFileContent() {
+        lock.readLock().lock();
+        try {
+            return Files.readString(filePath);
+        } catch (IOException e) {
+            return "Error reading file content.";
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
 }
