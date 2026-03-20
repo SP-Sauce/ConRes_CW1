@@ -5,7 +5,6 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
-//import java.util.stream.Collectors;
 
 public class WebServer {
     private final AuthService authService;
@@ -35,6 +34,10 @@ public class WebServer {
                 handleState(exchange);
             } else if (path.equals("/login")) {
                 handleLogin(exchange);
+            } else if (path.equals("/file-action")) {
+                handleFileAction(exchange);
+            } else if (path.equals("/logout")) {
+                handleLogout(exchange);
             } else {
                 sendResponse(exchange, "Not found", "text/plain", 404);
             }
@@ -42,7 +45,7 @@ public class WebServer {
 
         server.setExecutor(null);
         server.start();
-        System.out.println("Web server started on port 3000");
+        System.out.println("Web server started on port 5000");
     }
 
     private void handleState(HttpExchange exchange) throws IOException {
@@ -50,7 +53,11 @@ public class WebServer {
                 + "\"activeUsers\":" + sessionManager.getActiveUsersJson() + ","
                 + "\"waitingUsers\":" + sessionManager.getWaitingUsersJson() + ","
                 + "\"fileStatus\":\"" + escapeJson(fileAccessManager.getFileStatus()) + "\","
-                + "\"fileContent\":\"" + escapeJson(fileAccessManager.getFileContent()) + "\""
+                + "\"fileContent\":\"" + escapeJson(fileAccessManager.getFileContent()) + "\","
+                + "\"files\":[{"
+                + "\"name\":\"ProductSpecification.txt\","
+                + "\"status\":\"" + escapeJson(fileAccessManager.getFileStatus()) + "\""
+                + "}]"
                 + "}";
 
         sendResponse(exchange, json, "application/json");
@@ -66,17 +73,77 @@ public class WebServer {
 
         int id = extractInt(body, "id");
         String username = extractString(body, "username");
+
+        User user = authService.authenticate(id, username);
+
+        if (user == null) {
+            sendResponse(exchange, "Authentication failed.", "text/plain", 403);
+            return;
+        }
+
+        boolean loggedIn = sessionManager.requestLogin(user);
+
+        if (loggedIn) {
+            sendResponse(exchange, "Login successful for " + username, "text/plain");
+        } else {
+            sendResponse(exchange, username + " added to waiting queue.", "text/plain");
+        }
+    }
+
+    private void handleFileAction(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendResponse(exchange, "Method Not Allowed", "text/plain", 405);
+            return;
+        }
+
+        String body = new String(exchange.getRequestBody().readAllBytes());
+
+        int id = extractInt(body, "id");
+        String username = extractString(body, "username");
+        String fileName = extractString(body, "fileName");
         String action = extractString(body, "action");
 
         User user = authService.authenticate(id, username);
 
         if (user == null) {
-            sendResponse(exchange, "Authentication failed.", "text/plain");
+            sendResponse(exchange, "Authentication failed.", "text/plain", 403);
             return;
         }
 
-        sessionManager.requestLogin(user, action);
-        sendResponse(exchange, "Login request submitted for " + username, "text/plain");
+        if (!sessionManager.isUserLoggedIn(user.getId())) {
+            sendResponse(exchange, "User is not logged in.", "text/plain", 403);
+            return;
+        }
+
+        new FileOperationTask(user, fileAccessManager, action).start();
+        sendResponse(exchange, action + " request started for " + fileName, "text/plain");
+    }
+
+    private void handleLogout(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendResponse(exchange, "Method Not Allowed", "text/plain", 405);
+            return;
+        }
+
+        String body = new String(exchange.getRequestBody().readAllBytes());
+
+        int id = extractInt(body, "id");
+        String username = extractString(body, "username");
+
+        User user = authService.authenticate(id, username);
+
+        if (user == null) {
+            sendResponse(exchange, "Authentication failed.", "text/plain", 403);
+            return;
+        }
+
+        if (!sessionManager.isUserLoggedIn(user.getId())) {
+            sendResponse(exchange, "User is not logged in.", "text/plain", 403);
+            return;
+        }
+
+        sessionManager.logout(user);
+        sendResponse(exchange, "Logged out: " + username, "text/plain");
     }
 
     private void sendFile(HttpExchange exchange, String fileName, String contentType) throws IOException {

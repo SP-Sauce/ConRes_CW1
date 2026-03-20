@@ -8,3 +8,4 @@ User.class
 UserDAO.class
 DatabaseManager.class
 UserRequest.class
+FileOperationTask.class

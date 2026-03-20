@@ -4,7 +4,27 @@ body {
   background: #0b1d3a;
   color: #ffffff;
 }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
 
+th, td {
+  border-bottom: 1px solid #2d4d7a;
+  padding: 12px;
+  text-align: left;
+}
+
+th {
+  background: #0f1f36;
+}
+
+.action-btn {
+  margin-right: 8px;
+  width: auto;
+  padding: 8px 12px;
+}
 .container {
   max-width: 1100px;
   margin: 0 auto;

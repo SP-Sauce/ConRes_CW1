@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 public class SessionManager {
     private final Semaphore loginSemaphore;
     private final BlockingQueue<UserRequest> waitingQueue;
-    private final ConcurrentHashMap<Integer, UserSession> activeSessions;
+    private final ConcurrentHashMap<Integer, User> activeSessions;
     private final FileAccessManager fileAccessManager;
 
     public SessionManager(int maxConcurrentUsers, FileAccessManager fileAccessManager) {
@@ -17,37 +17,40 @@ public class SessionManager {
         this.fileAccessManager = fileAccessManager;
     }
 
-    public synchronized void requestLogin(User user, String action) {
+    public synchronized boolean requestLogin(User user) {
         if (user == null) {
-            System.out.println("Authentication failed.");
-            return;
+            return false;
         }
 
         if (activeSessions.containsKey(user.getId())) {
             System.out.println(user + " is already logged in.");
-            return;
+            return true;
         }
 
         boolean acquired = loginSemaphore.tryAcquire();
 
         if (acquired) {
-            startSession(user, action);
+            activeSessions.put(user.getId(), user);
+            System.out.println(user + " logged in successfully.");
+            printSystemState();
+            return true;
         } else {
-            waitingQueue.offer(new UserRequest(user, action));
+            waitingQueue.offer(new UserRequest(user, "waiting"));
             System.out.println(user + " added to waiting queue.");
             printSystemState();
+            return false;
         }
     }
 
-    private synchronized void startSession(User user, String action) {
-        UserSession session = new UserSession(user, this, fileAccessManager, action);
-        activeSessions.put(user.getId(), session);
-        System.out.println(user + " logged in successfully.");
-        printSystemState();
-        session.start();
+    public synchronized boolean isUserLoggedIn(int userId) {
+        return activeSessions.containsKey(userId);
     }
 
     public synchronized void logout(User user) {
+        if (!activeSessions.containsKey(user.getId())) {
+            return;
+        }
+
         activeSessions.remove(user.getId());
         loginSemaphore.release();
         System.out.println(user + " logged out.");
@@ -60,7 +63,9 @@ public class SessionManager {
         if (nextRequest != null) {
             boolean acquired = loginSemaphore.tryAcquire();
             if (acquired) {
-                startSession(nextRequest.getUser(), nextRequest.getAction());
+                User nextUser = nextRequest.getUser();
+                activeSessions.put(nextUser.getId(), nextUser);
+                System.out.println(nextUser + " moved from waiting queue to active users.");
             } else {
                 waitingQueue.offer(nextRequest);
             }
@@ -78,7 +83,7 @@ public class SessionManager {
 
     public synchronized String getActiveUsersJson() {
         return activeSessions.values().stream()
-                .map(session -> "\"" + session.getUser().toString() + "\"")
+                .map(user -> "\"" + user.toString() + "\"")
                 .collect(Collectors.joining(",", "[", "]"));
     }
 
