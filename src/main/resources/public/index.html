@@ -1,6 +1,59 @@
 <!DOCTYPE html>
-<html>
-  <body>
-    <h1>HELLO CONRES</h1>
-  </body>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConRes Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>ConRes File Management Dashboard</h1>
+
+    <div class="card">
+      <h2>Login Request</h2>
+      <form id="loginForm">
+        <label for="userId">User ID</label>
+        <input type="number" id="userId" required />
+
+        <label for="username">Username</label>
+        <input type="text" id="username" required />
+
+        <label for="action">Requested Action</label>
+        <select id="action">
+          <option value="read">Read</option>
+          <option value="write">Write</option>
+        </select>
+
+        <button type="submit">Submit Login Request</button>
+      </form>
+
+      <p id="message"></p>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="card">
+        <h2>Active Users</h2>
+        <ul id="activeUsers"></ul>
+      </div>
+
+      <div class="card">
+        <h2>Waiting Users</h2>
+        <ul id="waitingUsers"></ul>
+      </div>
+
+      <div class="card">
+        <h2>File Status</h2>
+        <p id="fileStatus">Idle</p>
+      </div>
+
+      <div class="card">
+        <h2>File Content</h2>
+        <pre id="fileContent">Loading...</pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
 </html>
