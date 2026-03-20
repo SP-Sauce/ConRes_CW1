@@ -32,7 +32,7 @@ public class DatabaseManager {
     }
 
     public static void setup_users() {
-        String sql = "INSERT INTO users (id, username) VALUES " +
+        String sql = "INSERT OR IGNORE INTO users (id, username) VALUES " +
                 "(1, 'Ali'), " +
                 "(2, 'Sara'), " +
                 " (3, 'Zain'), " +
@@ -41,7 +41,7 @@ public class DatabaseManager {
 
         try (Connection conn = connect();
                 Statement stmt = conn.createStatement()) {
-            stmt.execute(sql);
+            stmt.executeUpdate(sql);
             System.out.println("Database users added");
         } catch (SQLException e) {
             System.out.println("Init Error: " + e.getMessage());
