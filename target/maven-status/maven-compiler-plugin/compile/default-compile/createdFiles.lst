@@ -1,2 +1,10 @@
+AuthService.class
+UserSession.class
+SessionManager.class
+WebServer.class
+Main.class
+FileAccessManager.class
 User.class
+UserDAO.class
 DatabaseManager.class
+UserRequest.class

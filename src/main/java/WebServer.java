@@ -19,7 +19,7 @@ public class WebServer {
     }
 
     public void start() throws IOException {
-        HttpServer server = HttpServer.create(new InetSocketAddress(3000), 0);
+        HttpServer server = HttpServer.create(new InetSocketAddress(5000), 0);
 
         server.createContext("/", exchange -> {
             System.out.println("Request path: " + exchange.getRequestURI().getPath());
