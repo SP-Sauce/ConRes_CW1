@@ -1,4 +1,41 @@
 let currentUser = null;
+let selectedFileName = null;
+let waitingPollInterval = null;
+
+async function pollUserStatus() {
+  if (!currentUser) return;
+
+  try {
+    const response = await fetch("/user-status", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(currentUser)
+    });
+
+    const result = await response.text();
+
+    if (result === "ACTIVE") {
+      clearInterval(waitingPollInterval);
+      waitingPollInterval = null;
+
+      document.getElementById("waitingSection").style.display = "none";
+      document.getElementById("dashboardSection").style.display = "block";
+      document.getElementById("welcomeText").textContent = `Welcome, ${currentUser.username}`;
+      fetchState();
+      return;
+    }
+
+    if (result.startsWith("WAITING:")) {
+      const position = result.split(":")[1];
+      document.getElementById("waitingPositionText").textContent =
+        `You are number ${position} in the queue waiting to login.`;
+    }
+  } catch (error) {
+    console.error("Error polling user status:", error);
+  }
+}
 
 async function fetchState() {
   try {
@@ -37,8 +74,8 @@ async function fetchState() {
         <td>${file.name}</td>
         <td>${file.status}</td>
         <td>
-          <button class="action-btn" onclick="performFileAction('${file.name}', 'read')">Read</button>
-          <button class="action-btn" onclick="performFileAction('${file.name}', 'write')">Write</button>
+          <button class="action-btn" onclick="performRead('${file.name}')">Read</button>
+          <button class="action-btn" onclick="openWriteEditor('${file.name}')">Write</button>
         </td>
       `;
 
@@ -49,7 +86,7 @@ async function fetchState() {
   }
 }
 
-async function performFileAction(fileName, action) {
+async function performRead(fileName) {
   const actionMessage = document.getElementById("actionMessage");
 
   if (!currentUser) {
@@ -67,7 +104,7 @@ async function performFileAction(fileName, action) {
         id: currentUser.id,
         username: currentUser.username,
         fileName: fileName,
-        action: action
+        action: "read"
       })
     });
 
@@ -75,7 +112,57 @@ async function performFileAction(fileName, action) {
     actionMessage.textContent = result;
     fetchState();
   } catch (error) {
-    actionMessage.textContent = "File action failed.";
+    actionMessage.textContent = "Read request failed.";
+    console.error(error);
+  }
+}
+
+function openWriteEditor(fileName) {
+  if (!currentUser) {
+    document.getElementById("actionMessage").textContent = "You must log in first.";
+    return;
+  }
+
+  selectedFileName = fileName;
+
+  document.getElementById("editorTitle").textContent = `Edit File: ${fileName}`;
+  document.getElementById("fileEditor").value = document.getElementById("fileContent").textContent;
+  document.getElementById("editorMessage").textContent = "";
+  document.getElementById("editorSection").style.display = "block";
+}
+
+async function saveFileChanges() {
+  const editorMessage = document.getElementById("editorMessage");
+
+  if (!currentUser || !selectedFileName) {
+    editorMessage.textContent = "No file selected.";
+    return;
+  }
+
+  const editedContent = document.getElementById("fileEditor").value;
+
+  try {
+    const response = await fetch("/file-action", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        id: currentUser.id,
+        username: currentUser.username,
+        fileName: selectedFileName,
+        action: "write",
+        content: editedContent
+      })
+    });
+
+    const result = await response.text();
+    editorMessage.textContent = result;
+    document.getElementById("actionMessage").textContent = result;
+
+    fetchState();
+  } catch (error) {
+    editorMessage.textContent = "Save failed.";
     console.error(error);
   }
 }
@@ -83,7 +170,11 @@ async function performFileAction(fileName, action) {
 window.addEventListener("DOMContentLoaded", () => {
   const loginForm = document.getElementById("loginForm");
   const logoutBtn = document.getElementById("logoutBtn");
+  const saveFileBtn = document.getElementById("saveFileBtn");
+  const exitEditBtn = document.getElementById("exitEditBtn");
+
   const loginSection = document.getElementById("loginSection");
+  const waitingSection = document.getElementById("waitingSection");
   const dashboardSection = document.getElementById("dashboardSection");
   const loginMessage = document.getElementById("loginMessage");
   const welcomeText = document.getElementById("welcomeText");
@@ -105,13 +196,29 @@ window.addEventListener("DOMContentLoaded", () => {
 
       const result = await response.text();
 
-      if (response.ok) {
+      if (result === "LOGIN_SUCCESS") {
         currentUser = { id, username };
-        loginMessage.textContent = result;
+        loginMessage.textContent = "";
         welcomeText.textContent = `Welcome, ${username}`;
         loginSection.style.display = "none";
+        waitingSection.style.display = "none";
         dashboardSection.style.display = "block";
         fetchState();
+      } else if (result.startsWith("WAITING:")) {
+        currentUser = { id, username };
+        const position = result.split(":")[1];
+
+        loginMessage.textContent = "";
+        loginSection.style.display = "none";
+        dashboardSection.style.display = "none";
+        waitingSection.style.display = "block";
+        document.getElementById("waitingPositionText").textContent =
+          `You are number ${position} in the queue waiting to login.`;
+
+        if (waitingPollInterval) {
+          clearInterval(waitingPollInterval);
+        }
+        waitingPollInterval = setInterval(pollUserStatus, 2000);
       } else {
         loginMessage.textContent = result;
       }
@@ -132,10 +239,27 @@ window.addEventListener("DOMContentLoaded", () => {
       body: JSON.stringify(currentUser)
     });
 
+    if (waitingPollInterval) {
+      clearInterval(waitingPollInterval);
+      waitingPollInterval = null;
+    }
+
     currentUser = null;
+    selectedFileName = null;
+
+    document.getElementById("editorSection").style.display = "none";
     loginSection.style.display = "block";
+    waitingSection.style.display = "none";
     dashboardSection.style.display = "none";
     loginMessage.textContent = "Logged out.";
+  });
+
+  saveFileBtn.addEventListener("click", saveFileChanges);
+
+  exitEditBtn.addEventListener("click", () => {
+    selectedFileName = null;
+    document.getElementById("editorSection").style.display = "none";
+    document.getElementById("editorMessage").textContent = "";
   });
 
   setInterval(fetchState, 2000);

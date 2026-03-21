@@ -38,6 +38,8 @@ public class WebServer {
                 handleFileAction(exchange);
             } else if (path.equals("/logout")) {
                 handleLogout(exchange);
+            } else if (path.equals("/user-status")) {
+                handleUserStatus(exchange);
             } else {
                 sendResponse(exchange, "Not found", "text/plain", 404);
             }
@@ -84,40 +86,53 @@ public class WebServer {
         boolean loggedIn = sessionManager.requestLogin(user);
 
         if (loggedIn) {
-            sendResponse(exchange, "Login successful for " + username, "text/plain");
+            sendResponse(exchange, "LOGIN_SUCCESS", "text/plain");
         } else {
-            sendResponse(exchange, username + " added to waiting queue.", "text/plain");
+            int position = sessionManager.getWaitingPosition(user.getId());
+            sendResponse(exchange, "WAITING:" + position, "text/plain");
         }
     }
 
-    private void handleFileAction(HttpExchange exchange) throws IOException {
-        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
-            sendResponse(exchange, "Method Not Allowed", "text/plain", 405);
-            return;
+        private void handleFileAction(HttpExchange exchange) throws IOException {
+            if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+                sendResponse(exchange, "Method Not Allowed", "text/plain", 405);
+                return;
+            }
+
+            String body = new String(exchange.getRequestBody().readAllBytes());
+
+            int id = extractInt(body, "id");
+            String username = extractString(body, "username");
+            String fileName = extractString(body, "fileName");
+            String action = extractString(body, "action");
+            String content = extractOptionalString(body, "content");
+
+            User user = authService.authenticate(id, username);
+
+            if (user == null) {
+                sendResponse(exchange, "Authentication failed.", "text/plain", 403);
+                return;
+            }
+
+            if (!sessionManager.isUserLoggedIn(user.getId())) {
+                sendResponse(exchange, "User is not logged in.", "text/plain", 403);
+                return;
+            }
+
+            if ("read".equalsIgnoreCase(action)) {
+                new FileOperationTask(user, fileAccessManager, action, null).start();
+                sendResponse(exchange, "Read request started for " + fileName, "text/plain");
+                return;
+            }
+
+            if ("write".equalsIgnoreCase(action)) {
+                new FileOperationTask(user, fileAccessManager, action, content).start();
+                sendResponse(exchange, "Write request started for " + fileName, "text/plain");
+                return;
+            }
+
+            sendResponse(exchange, "Invalid file action.", "text/plain", 400);
         }
-
-        String body = new String(exchange.getRequestBody().readAllBytes());
-
-        int id = extractInt(body, "id");
-        String username = extractString(body, "username");
-        String fileName = extractString(body, "fileName");
-        String action = extractString(body, "action");
-
-        User user = authService.authenticate(id, username);
-
-        if (user == null) {
-            sendResponse(exchange, "Authentication failed.", "text/plain", 403);
-            return;
-        }
-
-        if (!sessionManager.isUserLoggedIn(user.getId())) {
-            sendResponse(exchange, "User is not logged in.", "text/plain", 403);
-            return;
-        }
-
-        new FileOperationTask(user, fileAccessManager, action).start();
-        sendResponse(exchange, action + " request started for " + fileName, "text/plain");
-    }
 
     private void handleLogout(HttpExchange exchange) throws IOException {
         if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
@@ -218,5 +233,63 @@ public class WebServer {
         }
 
         return json.substring(start, end);
+    }
+    private String extractOptionalString(String json, String key) {
+        String search = "\"" + key + "\":";
+        int keyIndex = json.indexOf(search);
+        if (keyIndex == -1) {
+            return "";
+        }
+
+        int start = keyIndex + search.length();
+        while (start < json.length() && (json.charAt(start) == ' ' || json.charAt(start) == '"')) {
+            start++;
+        }
+
+        int end = start;
+        while (end < json.length()) {
+            char c = json.charAt(end);
+            if (c == '"' && json.charAt(end - 1) != '\\') {
+                break;
+            }
+            end++;
+        }
+
+        return json.substring(start, end)
+                .replace("\\n", "\n")
+                .replace("\\\"", "\"")
+                .replace("\\\\", "\\");
+    }
+
+    private void handleUserStatus(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendResponse(exchange, "Method Not Allowed", "text/plain", 405);
+            return;
+        }
+
+        String body = new String(exchange.getRequestBody().readAllBytes());
+
+        int id = extractInt(body, "id");
+        String username = extractString(body, "username");
+
+        User user = authService.authenticate(id, username);
+
+        if (user == null) {
+            sendResponse(exchange, "INVALID", "text/plain", 403);
+            return;
+        }
+
+        if (sessionManager.isUserLoggedIn(user.getId())) {
+            sendResponse(exchange, "ACTIVE", "text/plain");
+            return;
+        }
+
+        int position = sessionManager.getWaitingPosition(user.getId());
+        if (position != -1) {
+            sendResponse(exchange, "WAITING:" + position, "text/plain");
+            return;
+        }
+
+        sendResponse(exchange, "NONE", "text/plain");
     }
 }

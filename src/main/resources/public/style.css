@@ -20,6 +20,16 @@ th {
   background: #0f1f36;
 }
 
+textarea {
+  width: 100%;
+  padding: 12px;
+  border-radius: 8px;
+  border: none;
+  box-sizing: border-box;
+  resize: vertical;
+  font-family: Arial, sans-serif;
+}
+
 .action-btn {
   margin-right: 8px;
   width: auto;

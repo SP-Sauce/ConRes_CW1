@@ -2,11 +2,13 @@ public class FileOperationTask extends Thread {
     private final User user;
     private final FileAccessManager fileAccessManager;
     private final String action;
+    private final String content;
 
-    public FileOperationTask(User user, FileAccessManager fileAccessManager, String action) {
+    public FileOperationTask(User user, FileAccessManager fileAccessManager, String action, String content) {
         this.user = user;
         this.fileAccessManager = fileAccessManager;
         this.action = action;
+        this.content = content;
     }
 
     @Override
@@ -14,8 +16,7 @@ public class FileOperationTask extends Thread {
         if ("read".equalsIgnoreCase(action)) {
             fileAccessManager.readFile(user);
         } else if ("write".equalsIgnoreCase(action)) {
-            String updatedText = "Updated by " + user.getUsername() + " (ID: " + user.getId() + ")";
-            fileAccessManager.writeFile(user, updatedText);
+            fileAccessManager.writeFile(user, content);
         }
     }
 }

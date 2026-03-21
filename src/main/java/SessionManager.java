@@ -92,4 +92,19 @@ public class SessionManager {
                 .map(request -> "\"" + request.getUser().toString() + "\"")
                 .collect(Collectors.joining(",", "[", "]"));
     }
+
+    public synchronized int getWaitingPosition(int userId) {
+        int position = 1;
+        for (UserRequest request : waitingQueue) {
+            if (request.getUser().getId() == userId) {
+                return position;
+            }
+            position++;
+        }
+        return -1;
+    }
+
+    public synchronized boolean isUserWaiting(int userId) {
+        return getWaitingPosition(userId) != -1;
+    }
 }
