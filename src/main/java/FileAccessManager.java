@@ -2,8 +2,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.TreeSet;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class FileAccessManager {
@@ -13,11 +15,17 @@ public class FileAccessManager {
     private final Set<Integer> activeReaders;
     private Integer currentWriter;
 
+    // Reservation state for editing session
+    private Integer reservedWriter;
+    private final Queue<User> writeWaitingQueue;
+
     public FileAccessManager(String fileName) {
         this.filePath = Path.of(fileName);
         this.lock = new ReentrantReadWriteLock(true);
         this.activeReaders = new TreeSet<>();
         this.currentWriter = null;
+        this.reservedWriter = null;
+        this.writeWaitingQueue = new LinkedList<>();
         initialiseFile();
     }
 
@@ -34,6 +42,73 @@ public class FileAccessManager {
         } catch (IOException e) {
             System.out.println("File init error: " + e.getMessage());
         }
+    }
+
+    public synchronized String requestWriteReservation(User user) {
+        if (reservedWriter == null) {
+            reservedWriter = user.getId();
+            System.out.println(user + " granted WRITE RESERVATION.");
+            printFileState();
+            return "WRITE_GRANTED";
+        }
+
+        if (reservedWriter.equals(user.getId())) {
+            return "WRITE_GRANTED";
+        }
+
+        boolean alreadyQueued = writeWaitingQueue.stream()
+                .anyMatch(u -> u.getId() == user.getId());
+
+        if (!alreadyQueued) {
+            writeWaitingQueue.offer(user);
+            System.out.println(user + " added to WRITE waiting queue.");
+        }
+
+        int position = getWriteWaitingPosition(user.getId());
+        printFileState();
+        return "WRITE_WAITING:" + position;
+    }
+
+    public synchronized void releaseWriteReservation(User user) {
+        if (reservedWriter == null || !reservedWriter.equals(user.getId())) {
+            return;
+        }
+
+        reservedWriter = null;
+        System.out.println(user + " released WRITE RESERVATION.");
+
+        User nextUser = writeWaitingQueue.poll();
+        if (nextUser != null) {
+            reservedWriter = nextUser.getId();
+            System.out.println(nextUser + " promoted from WRITE waiting queue to reserved writer.");
+        }
+
+        printFileState();
+    }
+
+    public synchronized boolean hasWriteReservation(int userId) {
+        return reservedWriter != null && reservedWriter == userId;
+    }
+
+    public synchronized int getWriteWaitingPosition(int userId) {
+        int position = 1;
+        for (User user : writeWaitingQueue) {
+            if (user.getId() == userId) {
+                return position;
+            }
+            position++;
+        }
+        return -1;
+    }
+
+    public synchronized String getWriteReservationStatus() {
+        if (reservedWriter != null) {
+            return "Write Reserved By: " + reservedWriter;
+        }
+        if (!writeWaitingQueue.isEmpty()) {
+            return "Write Queue: " + writeWaitingQueue.stream().map(User::getId).toList();
+        }
+        return "No Write Reservation";
     }
 
     public void readFile(User user) {
@@ -66,6 +141,11 @@ public class FileAccessManager {
     }
 
     public void writeFile(User user, String newContent) {
+        if (!hasWriteReservation(user.getId())) {
+            System.out.println(user + " attempted WRITE without reservation.");
+            return;
+        }
+
         lock.writeLock().lock();
         setWriter(user.getId());
 
@@ -116,6 +196,9 @@ public class FileAccessManager {
         if (currentWriter != null) {
             return "Updating: " + currentWriter;
         }
+        if (reservedWriter != null) {
+            return "Write Reserved By: " + reservedWriter;
+        }
         if (!activeReaders.isEmpty()) {
             return "Reading: " + activeReaders;
         }
@@ -126,6 +209,8 @@ public class FileAccessManager {
         System.out.println("----- FILE ACCESS STATE -----");
         System.out.println("Readers: " + activeReaders);
         System.out.println("Writer: " + (currentWriter == null ? "None" : currentWriter));
+        System.out.println("Reserved Writer: " + (reservedWriter == null ? "None" : reservedWriter));
+        System.out.println("Write Waiting Queue: " + writeWaitingQueue.stream().map(User::getId).toList());
         System.out.println("Status: " + getFileStatus());
         System.out.println("-----------------------------");
     }

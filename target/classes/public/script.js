@@ -48,6 +48,9 @@ async function fetchState() {
     const fileContent = document.getElementById("fileContent");
     const fileTableBody = document.getElementById("fileTableBody");
 
+    const writeReservationStatus = document.getElementById("writeReservationStatus");
+    writeReservationStatus.textContent = data.writeReservationStatus;
+
     activeUsersList.innerHTML = "";
     waitingUsersList.innerHTML = "";
     fileTableBody.innerHTML = "";
@@ -117,18 +120,50 @@ async function performRead(fileName) {
   }
 }
 
-function openWriteEditor(fileName) {
+async function openWriteEditor(fileName) {
   if (!currentUser) {
     document.getElementById("actionMessage").textContent = "You must log in first.";
     return;
   }
 
-  selectedFileName = fileName;
+  try {
+    const response = await fetch("/request-write", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        id: currentUser.id,
+        username: currentUser.username
+      })
+    });
 
-  document.getElementById("editorTitle").textContent = `Edit File: ${fileName}`;
-  document.getElementById("fileEditor").value = document.getElementById("fileContent").textContent;
-  document.getElementById("editorMessage").textContent = "";
-  document.getElementById("editorSection").style.display = "block";
+    const result = await response.text();
+
+    if (result === "WRITE_GRANTED") {
+      selectedFileName = fileName;
+      document.getElementById("editorTitle").textContent = `Edit File: ${fileName}`;
+      document.getElementById("fileEditor").value = document.getElementById("fileContent").textContent;
+      document.getElementById("editorMessage").textContent = "";
+      document.getElementById("actionMessage").textContent = "Write access granted.";
+      document.getElementById("editorSection").style.display = "block";
+      fetchState();
+      return;
+    }
+
+    if (result.startsWith("WRITE_WAITING:")) {
+      const position = result.split(":")[1];
+      document.getElementById("actionMessage").textContent =
+        `Write access unavailable. You are number ${position} in the write queue.`;
+      fetchState();
+      return;
+    }
+
+    document.getElementById("actionMessage").textContent = result;
+  } catch (error) {
+    document.getElementById("actionMessage").textContent = "Failed to request write access.";
+    console.error(error);
+  }
 }
 
 async function saveFileChanges() {
@@ -160,6 +195,16 @@ async function saveFileChanges() {
     editorMessage.textContent = result;
     document.getElementById("actionMessage").textContent = result;
 
+    await fetch("/release-write", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(currentUser)
+    });
+
+    selectedFileName = null;
+    document.getElementById("editorSection").style.display = "none";
     fetchState();
   } catch (error) {
     editorMessage.textContent = "Save failed.";
@@ -231,6 +276,14 @@ window.addEventListener("DOMContentLoaded", () => {
   logoutBtn.addEventListener("click", async () => {
     if (!currentUser) return;
 
+    await fetch("/release-write", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(currentUser)
+    });
+    
     await fetch("/logout", {
       method: "POST",
       headers: {
@@ -256,10 +309,21 @@ window.addEventListener("DOMContentLoaded", () => {
 
   saveFileBtn.addEventListener("click", saveFileChanges);
 
-  exitEditBtn.addEventListener("click", () => {
+  exitEditBtn.addEventListener("click", async () => {
+    if (currentUser) {
+      await fetch("/release-write", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(currentUser)
+      });
+    }
+
     selectedFileName = null;
     document.getElementById("editorSection").style.display = "none";
     document.getElementById("editorMessage").textContent = "";
+    fetchState();
   });
 
   setInterval(fetchState, 2000);

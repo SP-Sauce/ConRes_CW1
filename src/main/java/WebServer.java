@@ -40,7 +40,11 @@ public class WebServer {
                 handleLogout(exchange);
             } else if (path.equals("/user-status")) {
                 handleUserStatus(exchange);
-            } else {
+            } else if (path.equals("/request-write")) {
+                handleRequestWrite(exchange);
+            } else if (path.equals("/release-write")) {
+                handleReleaseWrite(exchange);
+            }else {
                 sendResponse(exchange, "Not found", "text/plain", 404);
             }
         });
@@ -55,6 +59,7 @@ public class WebServer {
                 + "\"activeUsers\":" + sessionManager.getActiveUsersJson() + ","
                 + "\"waitingUsers\":" + sessionManager.getWaitingUsersJson() + ","
                 + "\"fileStatus\":\"" + escapeJson(fileAccessManager.getFileStatus()) + "\","
+                + "\"writeReservationStatus\":\"" + escapeJson(fileAccessManager.getWriteReservationStatus()) + "\","
                 + "\"fileContent\":\"" + escapeJson(fileAccessManager.getFileContent()) + "\","
                 + "\"files\":[{"
                 + "\"name\":\"ProductSpecification.txt\","
@@ -126,6 +131,11 @@ public class WebServer {
             }
 
             if ("write".equalsIgnoreCase(action)) {
+                if (!fileAccessManager.hasWriteReservation(user.getId())) {
+                    sendResponse(exchange, "Write access not reserved for this user.", "text/plain", 403);
+                    return;
+                }
+
                 new FileOperationTask(user, fileAccessManager, action, content).start();
                 sendResponse(exchange, "Write request started for " + fileName, "text/plain");
                 return;
@@ -291,5 +301,54 @@ public class WebServer {
         }
 
         sendResponse(exchange, "NONE", "text/plain");
+    }
+
+    private void handleRequestWrite(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendResponse(exchange, "Method Not Allowed", "text/plain", 405);
+            return;
+        }
+
+        String body = new String(exchange.getRequestBody().readAllBytes());
+
+        int id = extractInt(body, "id");
+        String username = extractString(body, "username");
+
+        User user = authService.authenticate(id, username);
+
+        if (user == null) {
+            sendResponse(exchange, "Authentication failed.", "text/plain", 403);
+            return;
+        }
+
+        if (!sessionManager.isUserLoggedIn(user.getId())) {
+            sendResponse(exchange, "User is not logged in.", "text/plain", 403);
+            return;
+        }
+
+        String result = fileAccessManager.requestWriteReservation(user);
+        sendResponse(exchange, result, "text/plain");
+    }
+
+    private void handleReleaseWrite(HttpExchange exchange) throws IOException {
+        if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+            sendResponse(exchange, "Method Not Allowed", "text/plain", 405);
+            return;
+        }
+
+        String body = new String(exchange.getRequestBody().readAllBytes());
+
+        int id = extractInt(body, "id");
+        String username = extractString(body, "username");
+
+        User user = authService.authenticate(id, username);
+
+        if (user == null) {
+            sendResponse(exchange, "Authentication failed.", "text/plain", 403);
+            return;
+        }
+
+        fileAccessManager.releaseWriteReservation(user);
+        sendResponse(exchange, "WRITE_RELEASED", "text/plain");
     }
 }

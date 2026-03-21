@@ -1,5 +1,4 @@
 AuthService.class
-UserSession.class
 SessionManager.class
 WebServer.class
 Main.class
