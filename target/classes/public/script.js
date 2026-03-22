@@ -45,11 +45,7 @@ async function fetchState() {
     const activeUsersList = document.getElementById("activeUsers");
     const waitingUsersList = document.getElementById("waitingUsers");
     const fileStatus = document.getElementById("fileStatus");
-    const fileContent = document.getElementById("fileContent");
     const fileTableBody = document.getElementById("fileTableBody");
-
-    const writeReservationStatus = document.getElementById("writeReservationStatus");
-    writeReservationStatus.textContent = data.writeReservationStatus;
 
     activeUsersList.innerHTML = "";
     waitingUsersList.innerHTML = "";
@@ -68,7 +64,6 @@ async function fetchState() {
     });
 
     fileStatus.textContent = data.fileStatus;
-    fileContent.textContent = data.fileContent;
 
     data.files.forEach(file => {
       const row = document.createElement("tr");
@@ -113,6 +108,14 @@ async function performRead(fileName) {
 
     const result = await response.text();
     actionMessage.textContent = result;
+
+    const stateResponse = await fetch("/state");
+    const data = await stateResponse.json();
+
+    document.getElementById("readViewerTitle").textContent = `Read File: ${fileName}`;
+    document.getElementById("readViewerContent").textContent = data.fileContent;
+    document.getElementById("readViewerSection").style.display = "block";
+
     fetchState();
   } catch (error) {
     actionMessage.textContent = "Read request failed.";
@@ -141,9 +144,12 @@ async function openWriteEditor(fileName) {
     const result = await response.text();
 
     if (result === "WRITE_GRANTED") {
+      const stateResponse = await fetch("/state");
+      const data = await stateResponse.json();
+
       selectedFileName = fileName;
       document.getElementById("editorTitle").textContent = `Edit File: ${fileName}`;
-      document.getElementById("fileEditor").value = document.getElementById("fileContent").textContent;
+      document.getElementById("fileEditor").value = data.fileContent;
       document.getElementById("editorMessage").textContent = "";
       document.getElementById("actionMessage").textContent = "Write access granted.";
       document.getElementById("editorSection").style.display = "block";
@@ -192,19 +198,10 @@ async function saveFileChanges() {
     });
 
     const result = await response.text();
-    editorMessage.textContent = result;
+    editorMessage.textContent = "Changes saved.";
     document.getElementById("actionMessage").textContent = result;
 
-    await fetch("/release-write", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(currentUser)
-    });
-
-    selectedFileName = null;
-    document.getElementById("editorSection").style.display = "none";
+    // keep editor open
     fetchState();
   } catch (error) {
     editorMessage.textContent = "Save failed.";
@@ -223,6 +220,11 @@ window.addEventListener("DOMContentLoaded", () => {
   const dashboardSection = document.getElementById("dashboardSection");
   const loginMessage = document.getElementById("loginMessage");
   const welcomeText = document.getElementById("welcomeText");
+  const closeReadBtn = document.getElementById("closeReadBtn");
+
+  closeReadBtn.addEventListener("click", () => {
+    document.getElementById("readViewerSection").style.display = "none";
+  });
 
   loginForm.addEventListener("submit", async (e) => {
     e.preventDefault();

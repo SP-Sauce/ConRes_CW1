@@ -57,10 +57,13 @@
           <h2>File Status</h2>
           <p id="fileStatus">Idle</p>
         </div>
-
-        <div class="card">
-          <h2>File Content</h2>
-          <pre id="fileContent">Loading...</pre>
+        
+        <div class="card" id="readViewerSection" style="display: none;">
+          <h2 id="readViewerTitle">Read File</h2>
+          <pre id="readViewerContent"></pre>
+          <div style="margin-top: 12px;">
+            <button id="closeReadBtn" type="button">Exit</button>
+          </div>
         </div>
       </div>
 
