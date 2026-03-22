@@ -63,11 +63,16 @@ public class WebServer {
                 + "\"activeUsers\":" + sessionManager.getActiveUsersJson() + ","
                 + "\"waitingUsers\":" + sessionManager.getWaitingUsersJson() + ","
                 + "\"fileStatus\":\"" + escapeJson(fileAccessManager.getFileStatus()) + "\","
+                + "\"readerStatus\":\"" + escapeJson(fileAccessManager.getReaderStatus()) + "\","
+                + "\"writerStatus\":\"" + escapeJson(fileAccessManager.getWriterStatus()) + "\","
                 + "\"writeReservationStatus\":\"" + escapeJson(fileAccessManager.getWriteReservationStatus()) + "\","
                 + "\"fileContent\":\"" + escapeJson(fileAccessManager.getFileContent()) + "\","
                 + "\"files\":[{"
                 + "\"name\":\"ProductSpecification.txt\","
-                + "\"status\":\"" + escapeJson(fileAccessManager.getFileStatus()) + "\""
+                + "\"status\":\"" + escapeJson(fileAccessManager.getFileStatus()) + "\","
+                + "\"readerStatus\":\"" + escapeJson(fileAccessManager.getReaderStatus()) + "\","
+                + "\"writerStatus\":\"" + escapeJson(fileAccessManager.getWriterStatus()) + "\","
+                + "\"writeReservationStatus\":\"" + escapeJson(fileAccessManager.getWriteReservationStatus()) + "\""
                 + "}]"
                 + "}";
 

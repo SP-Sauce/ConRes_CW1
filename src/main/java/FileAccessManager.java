@@ -100,10 +100,21 @@ public class FileAccessManager {
         return -1;
     }
 
-    public synchronized String getWriteReservationStatus() {
+    public synchronized String getReaderStatus() {
+        return activeReaders.isEmpty() ? "None" : activeReaders.toString();
+    }
+
+    public synchronized String getWriterStatus() {
         if (reservedWriter != null) {
-            return "Write Reserved By: " + reservedWriter;
+            return reservedWriter.toString();
         }
+        return "None";
+    }
+
+    public synchronized String getWriteReservationStatus() {
+        // if (reservedWriter != null) {
+        // return "Write Reserved By: " + reservedWriter;
+        // }
         if (!writeWaitingQueue.isEmpty()) {
             return "Write Queue: " + writeWaitingQueue.stream().map(User::getId).toList();
         }
@@ -120,17 +131,12 @@ public class FileAccessManager {
 
             String content = Files.readString(filePath);
 
-            Thread.sleep(3000);
-
             System.out.println("----- FILE CONTENT FOR " + user.getUsername() + " -----");
             System.out.println(content);
             System.out.println("--------------------------------------------");
 
         } catch (IOException e) {
             System.out.println("Read error for " + user + ": " + e.getMessage());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            System.out.println(user + " read interrupted.");
         } finally {
             removeReader(user.getId());
             System.out.println(user + " finished READING.");
@@ -151,9 +157,6 @@ public class FileAccessManager {
         try {
             System.out.println(user + " is WRITING to the file...");
             printFileState();
-
-            Thread.sleep(3000);
-
             Files.writeString(
                     filePath,
                     newContent + System.lineSeparator(),
@@ -164,15 +167,13 @@ public class FileAccessManager {
 
         } catch (IOException e) {
             System.out.println("Write error for " + user + ": " + e.getMessage());
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            System.out.println(user + " write interrupted.");
         } finally {
             clearWriter();
             printFileState();
             lock.writeLock().unlock();
         }
     }
+
     public synchronized String requestReadAccess(User user) {
         activeReaders.add(user.getId());
         System.out.println(user + " entered READ mode.");

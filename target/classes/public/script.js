@@ -45,6 +45,9 @@ async function fetchState() {
     const activeUsersList = document.getElementById("activeUsers");
     const waitingUsersList = document.getElementById("waitingUsers");
     const fileStatus = document.getElementById("fileStatus");
+    const readerStatus = document.getElementById("readerStatus");
+    const writerStatus = document.getElementById("writerStatus");
+    const writeReservationStatus = document.getElementById("writeReservationStatus");
     const fileTableBody = document.getElementById("fileTableBody");
 
     activeUsersList.innerHTML = "";
@@ -64,13 +67,19 @@ async function fetchState() {
     });
 
     fileStatus.textContent = data.fileStatus;
-
+    readerStatus.textContent = data.readerStatus;
+    writerStatus.textContent = data.writerStatus;
+    writeReservationStatus.textContent = data.writeReservationStatus;
+    
     data.files.forEach(file => {
       const row = document.createElement("tr");
 
       row.innerHTML = `
         <td>${file.name}</td>
         <td>${file.status}</td>
+        <td>${file.readerStatus}</td>
+        <td>${file.writerStatus}</td>
+        <td>${file.writeReservationStatus}</td>
         <td>
           <button class="action-btn" onclick="performRead('${file.name}')">Read</button>
           <button class="action-btn" onclick="openWriteEditor('${file.name}')">Write</button>

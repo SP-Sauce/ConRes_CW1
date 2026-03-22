@@ -49,13 +49,23 @@
         </div>
         
         <div class="card">
-          <h2>Write Reservation</h2>
-          <p id="writeReservationStatus">No Write Reservation</p>
-        </div>
-        
-        <div class="card">
           <h2>File Status</h2>
           <p id="fileStatus">Idle</p>
+        </div>
+
+        <div class="card">
+          <h2>Current Readers</h2>
+          <p id="readerStatus">None</p>
+        </div>
+
+        <div class="card">
+          <h2>Current Writer</h2>
+          <p id="writerStatus">None</p>
+        </div>
+
+        <div class="card">
+          <h2>Write Reservation</h2>
+          <p id="writeReservationStatus">No Write Reservation</p>
         </div>
         
         <div class="card" id="readViewerSection" style="display: none;">
@@ -74,6 +84,9 @@
             <tr>
               <th>File Name</th>
               <th>Status</th>
+              <th>Current Readers</th>
+              <th>Current Writer</th>
+              <th>Write Reservation</th>
               <th>Actions</th>
             </tr>
           </thead>
