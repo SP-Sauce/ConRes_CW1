@@ -44,6 +44,10 @@ public class WebServer {
                 handleRequestWrite(exchange);
             } else if (path.equals("/release-write")) {
                 handleReleaseWrite(exchange);
+            }else if (path.equals("/request-read")) {
+                handleRequestRead(exchange);
+            } else if (path.equals("/release-read")) {
+                handleReleaseRead(exchange);
             }else {
                 sendResponse(exchange, "Not found", "text/plain", 404);
             }
@@ -124,11 +128,6 @@ public class WebServer {
                 return;
             }
 
-            if ("read".equalsIgnoreCase(action)) {
-                new FileOperationTask(user, fileAccessManager, action, null).start();
-                sendResponse(exchange, "Read request started for " + fileName, "text/plain");
-                return;
-            }
 
             if ("write".equalsIgnoreCase(action)) {
                 if (!fileAccessManager.hasWriteReservation(user.getId())) {
@@ -351,4 +350,52 @@ public class WebServer {
         fileAccessManager.releaseWriteReservation(user);
         sendResponse(exchange, "WRITE_RELEASED", "text/plain");
     }
+        private void handleRequestRead(HttpExchange exchange) throws IOException {
+            if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+                sendResponse(exchange, "Method Not Allowed", "text/plain", 405);
+                return;
+            }
+
+            String body = new String(exchange.getRequestBody().readAllBytes());
+
+            int id = extractInt(body, "id");
+            String username = extractString(body, "username");
+
+            User user = authService.authenticate(id, username);
+
+            if (user == null) {
+                sendResponse(exchange, "Authentication failed.", "text/plain", 403);
+                return;
+            }
+
+            if (!sessionManager.isUserLoggedIn(user.getId())) {
+                sendResponse(exchange, "User is not logged in.", "text/plain", 403);
+                return;
+            }
+
+            String result = fileAccessManager.requestReadAccess(user);
+            sendResponse(exchange, result, "text/plain");
+        }
+
+        private void handleReleaseRead(HttpExchange exchange) throws IOException {
+            if (!exchange.getRequestMethod().equalsIgnoreCase("POST")) {
+                sendResponse(exchange, "Method Not Allowed", "text/plain", 405);
+                return;
+            }
+
+            String body = new String(exchange.getRequestBody().readAllBytes());
+
+            int id = extractInt(body, "id");
+            String username = extractString(body, "username");
+
+            User user = authService.authenticate(id, username);
+
+            if (user == null) {
+                sendResponse(exchange, "Authentication failed.", "text/plain", 403);
+                return;
+            }
+
+            fileAccessManager.releaseReadAccess(user);
+            sendResponse(exchange, "READ_RELEASED", "text/plain");
+        }
 }

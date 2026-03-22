@@ -83,7 +83,6 @@ async function fetchState() {
     console.error("Error fetching state:", error);
   }
 }
-
 async function performRead(fileName) {
   const actionMessage = document.getElementById("actionMessage");
 
@@ -93,30 +92,32 @@ async function performRead(fileName) {
   }
 
   try {
-    const response = await fetch("/file-action", {
+    const response = await fetch("/request-read", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
         id: currentUser.id,
-        username: currentUser.username,
-        fileName: fileName,
-        action: "read"
+        username: currentUser.username
       })
     });
 
     const result = await response.text();
+
+    if (result === "READ_GRANTED") {
+      const stateResponse = await fetch("/state");
+      const data = await stateResponse.json();
+
+      document.getElementById("readViewerTitle").textContent = `Read File: ${fileName}`;
+      document.getElementById("readViewerContent").textContent = data.fileContent;
+      document.getElementById("readViewerSection").style.display = "block";
+      document.getElementById("actionMessage").textContent = "Read access granted.";
+      fetchState();
+      return;
+    }
+
     actionMessage.textContent = result;
-
-    const stateResponse = await fetch("/state");
-    const data = await stateResponse.json();
-
-    document.getElementById("readViewerTitle").textContent = `Read File: ${fileName}`;
-    document.getElementById("readViewerContent").textContent = data.fileContent;
-    document.getElementById("readViewerSection").style.display = "block";
-
-    fetchState();
   } catch (error) {
     actionMessage.textContent = "Read request failed.";
     console.error(error);
@@ -222,8 +223,19 @@ window.addEventListener("DOMContentLoaded", () => {
   const welcomeText = document.getElementById("welcomeText");
   const closeReadBtn = document.getElementById("closeReadBtn");
 
-  closeReadBtn.addEventListener("click", () => {
+  closeReadBtn.addEventListener("click", async () => {
+    if (currentUser) {
+      await fetch("/release-read", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(currentUser)
+      });
+    }
+
     document.getElementById("readViewerSection").style.display = "none";
+    fetchState();
   });
 
   loginForm.addEventListener("submit", async (e) => {

@@ -35,8 +35,7 @@ public class FileAccessManager {
                 Files.writeString(
                         filePath,
                         "Initial Product Specification\n",
-                        StandardOpenOption.CREATE
-                );
+                        StandardOpenOption.CREATE);
                 System.out.println("Shared file created: " + filePath);
             }
         } catch (IOException e) {
@@ -121,7 +120,7 @@ public class FileAccessManager {
 
             String content = Files.readString(filePath);
 
-            Thread.sleep(2000);
+            Thread.sleep(3000);
 
             System.out.println("----- FILE CONTENT FOR " + user.getUsername() + " -----");
             System.out.println(content);
@@ -159,8 +158,7 @@ public class FileAccessManager {
                     filePath,
                     newContent + System.lineSeparator(),
                     StandardOpenOption.TRUNCATE_EXISTING,
-                    StandardOpenOption.WRITE
-            );
+                    StandardOpenOption.WRITE);
 
             System.out.println(user + " finished WRITING.");
 
@@ -173,6 +171,19 @@ public class FileAccessManager {
             clearWriter();
             printFileState();
             lock.writeLock().unlock();
+        }
+    }
+    public synchronized String requestReadAccess(User user) {
+        activeReaders.add(user.getId());
+        System.out.println(user + " entered READ mode.");
+        printFileState();
+        return "READ_GRANTED";
+    }
+
+    public synchronized void releaseReadAccess(User user) {
+        if (activeReaders.remove(user.getId())) {
+            System.out.println(user + " exited READ mode.");
+            printFileState();
         }
     }
 
