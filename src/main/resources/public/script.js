@@ -41,12 +41,8 @@ async function fetchState() {
   try {
     const response = await fetch("/state");
     const data = await response.json();
-
     const activeUsersList = document.getElementById("activeUsers");
     const waitingUsersList = document.getElementById("waitingUsers");
-    const fileStatus = document.getElementById("fileStatus");
-    const readerStatus = document.getElementById("readerStatus");
-    const writerStatus = document.getElementById("writerStatus");
     const writeReservationStatus = document.getElementById("writeReservationStatus");
     const fileTableBody = document.getElementById("fileTableBody");
 
@@ -65,11 +61,6 @@ async function fetchState() {
       li.textContent = user;
       waitingUsersList.appendChild(li);
     });
-
-    fileStatus.textContent = data.fileStatus;
-    readerStatus.textContent = data.readerStatus;
-    writerStatus.textContent = data.writerStatus;
-    writeReservationStatus.textContent = data.writeReservationStatus;
     
     data.files.forEach(file => {
       const row = document.createElement("tr");
