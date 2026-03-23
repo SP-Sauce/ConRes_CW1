@@ -17,15 +17,21 @@ public class SessionManager {
         this.fileAccessManager = fileAccessManager;
     }
 
-    public synchronized boolean requestLogin(User user) {
+    public synchronized String requestLogin(User user) {
        
         if (user == null) {
-            return false;
+            return "INVALID_USER";
         }
 
         if (activeSessions.containsKey(user.getId())) {
             System.out.println(user + " is already logged in.");
-            return true;
+            return "ALREADY_LOGGED_IN";
+        }
+
+        if (isUserWaiting(user.getId())){
+            System.out.println(user + " is already in the waiting queue.");
+            printSystemState();
+            return "WAITING:"+getWaitingPosition(user.getId());
         }
 
         boolean acquired = loginSemaphore.tryAcquire();
@@ -37,12 +43,12 @@ public class SessionManager {
            
             System.out.println(user + " logged in successfully.");
             printSystemState();
-            return true;
+            return "LOGIN_SUCCESS";
         } else {
             waitingQueue.offer(new UserRequest(user, "waiting"));
             System.out.println(user + " added to waiting queue.");
             printSystemState();
-            return false;
+            return "WAITING:"+getWaitingPosition(user.getId());
         }
     }
 
@@ -57,6 +63,9 @@ public class SessionManager {
             return;
         }
 
+        
+        fileAccessManager.releaseReadAccess(user);
+        fileAccessManager.releaseWriteReservation(user);
         session.terminate();
         loginSemaphore.release();
         System.out.println(user + " logged out.");

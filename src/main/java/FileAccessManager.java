@@ -14,6 +14,7 @@ public class FileAccessManager {
     private final ReentrantReadWriteLock lock;
 
     private final Set<Integer> activeReaders;
+    private final Set<Integer> readLockHolders;
     private Integer currentWriter;
 
     // Reservation state for editing session
@@ -23,6 +24,7 @@ public class FileAccessManager {
     public FileAccessManager(String fileName) {
         this.filePath = Path.of(fileName);
         this.lock = new ReentrantReadWriteLock(true);
+        this.readLockHolders = new TreeSet<>();
         this.activeReaders = new TreeSet<>();
         this.currentWriter = null;
         this.reservedWriter = null;
@@ -118,7 +120,7 @@ public class FileAccessManager {
         }
         return "No Write Reservation";
     }
-
+// readFile is a console/demo helper 
     public void readFile(User user) {
         lock.readLock().lock();
         addReader(user.getId());
@@ -189,16 +191,41 @@ public class FileAccessManager {
     }
 
     public synchronized String requestReadAccess(User user) {
+        if (readLockHolders.contains(user.getId())) {
+            return "READ_GRANTED";
+        }
+
+        lock.readLock().lock();
         activeReaders.add(user.getId());
-        System.out.println(user + " entered READ mode.");
+        readLockHolders.add(user.getId());
+
+        System.out.println(user + " acquired READ LOCK and entered READ mode.");
         printFileState();
         return "READ_GRANTED";
     }
 
     public synchronized void releaseReadAccess(User user) {
-        if (activeReaders.remove(user.getId())) {
-            System.out.println(user + " exited READ mode.");
-            printFileState();
+        if (!readLockHolders.contains(user.getId())) {
+            return;
+        }
+
+        activeReaders.remove(user.getId());
+        readLockHolders.remove(user.getId());
+        lock.readLock().unlock();
+
+        System.out.println(user + " released READ LOCK and exited READ mode.");
+        printFileState();
+    }
+
+    public synchronized String getFileContentForActiveReader(User user) {
+        if (!readLockHolders.contains(user.getId())) {
+            return "Read access not held by this user.";
+        }
+
+        try {
+            return Files.readString(filePath);
+        } catch (IOException e) {
+            return "Error reading file content.";
         }
     }
 

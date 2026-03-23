@@ -105,17 +105,17 @@ async function performRead(fileName) {
 
     const result = await response.text();
 
-    if (result === "READ_GRANTED") {
-      const stateResponse = await fetch("/state");
-      const data = await stateResponse.json();
-
+    if (!response.ok) {
+      document.getElementById("actionMessage").textContent = result;
+      return;
+    }
       document.getElementById("readViewerTitle").textContent = `Read File: ${fileName}`;
-      document.getElementById("readViewerContent").textContent = data.fileContent;
+      document.getElementById("readViewerContent").textContent = result;
       document.getElementById("readViewerSection").style.display = "block";
       document.getElementById("actionMessage").textContent = "Read access granted.";
       fetchState();
       return;
-    }
+    
 
     actionMessage.textContent = result;
   } catch (error) {
@@ -263,7 +263,10 @@ window.addEventListener("DOMContentLoaded", () => {
         waitingSection.style.display = "none";
         dashboardSection.style.display = "block";
         fetchState();
-      } else if (result.startsWith("WAITING:")) {
+      } else if (result === "ALREADY_LOGGED_IN"){
+        loginMessage.textContent = "User already logged in.";
+      } 
+      else if (result.startsWith("WAITING:")) {
         currentUser = { id, username };
         const position = result.split(":")[1];
 

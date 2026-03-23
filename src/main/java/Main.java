@@ -5,7 +5,7 @@ public class Main {
 
             AuthService authService = new AuthService();
             FileAccessManager fileAccessManager = new FileAccessManager("ProductSpecification.txt");
-            SessionManager sessionManager = new SessionManager(4, fileAccessManager);
+            SessionManager sessionManager = new SessionManager(2, fileAccessManager);
 
             WebServer webServer = new WebServer(authService, sessionManager, fileAccessManager);
             webServer.start();

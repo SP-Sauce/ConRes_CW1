@@ -93,14 +93,8 @@ public class WebServer {
             return;
         }
 
-        boolean loggedIn = sessionManager.requestLogin(user);
-
-        if (loggedIn) {
-            sendResponse(exchange, "LOGIN_SUCCESS", "text/plain");
-        } else {
-            int position = sessionManager.getWaitingPosition(user.getId());
-            sendResponse(exchange, "WAITING:" + position, "text/plain");
-        }
+        String loggedInresult = sessionManager.requestLogin(user);
+        sendResponse(exchange, loggedInresult, "text/plain");
     }
 
         private void handleFileAction(HttpExchange exchange) throws IOException {
@@ -374,8 +368,13 @@ public class WebServer {
                 return;
             }
 
-            String result = fileAccessManager.requestReadAccess(user);
-            sendResponse(exchange, result, "text/plain");
+            String accessResult = fileAccessManager.requestReadAccess(user);
+            if (!"READ_GRANTED".equals(accessResult)){
+                sendResponse(exchange, accessResult,"text/plain", 403);
+                return;
+            }
+            String filecontent = fileAccessManager.getFileContentForActiveReader(user);
+            sendResponse(exchange, filecontent, "text/plain",200);
         }
 
         private void handleReleaseRead(HttpExchange exchange) throws IOException {

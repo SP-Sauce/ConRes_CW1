@@ -13,6 +13,7 @@ public class FileOperationTask extends Thread {
 
     @Override
     public void run() {
+        // console demo helper
         if ("read".equalsIgnoreCase(action)) {
             fileAccessManager.readFile(user);
         } else if ("write".equalsIgnoreCase(action)) {
