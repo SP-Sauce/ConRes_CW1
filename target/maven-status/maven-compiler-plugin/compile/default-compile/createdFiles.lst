@@ -5,6 +5,7 @@ WebServer.class
 Main.class
 FileAccessManager.class
 User.class
+UserSession$SessionTask.class
 UserDAO.class
 DatabaseManager.class
 UserRequest.class
