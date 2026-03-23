@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConRes Dashboard</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>ConRes File Management Dashboard</h1>
+
+    <div class="card" id="loginSection">
+      <h2>Login</h2>
+      <form id="loginForm">
+        <label for="userId">User ID</label>
+        <input type="number" id="userId" required />
+
+        <label for="username">Username</label>
+        <input type="text" id="username" required />
+
+        <button type="submit">Login</button>
+      </form>
+
+      <p id="loginMessage"></p>
+    </div>
+
+    <div class="card" id="waitingSection" style="display: none; text-align: center;">
+      <h2>Max capacity of users on this site</h2>
+      <p>Please wait.</p>
+      <p id="waitingPositionText"></p>
+    </div>
+
+    <div id="dashboardSection" style="display: none;">
+      <div class="card">
+        <h2 id="welcomeText">Welcome</h2>
+        <button id="logoutBtn">Logout</button>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="card">
+          <h2>Active Users</h2>
+          <ul id="activeUsers"></ul>
+        </div>
+
+        <div class="card">
+          <h2>Waiting Users</h2>
+          <ul id="waitingUsers"></ul>
+        </div>
+        
+        <div class="card" id="readViewerSection" style="display: none;">
+          <h2 id="readViewerTitle">Read File</h2>
+          <pre id="readViewerContent"></pre>
+          <div style="margin-top: 12px;">
+            <button id="closeReadBtn" type="button">Exit</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Files</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>File Name</th>
+              <th>Status</th>
+              <th>Current Readers</th>
+              <th>Current Writer</th>
+              <th>Write Reservation</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="fileTableBody"></tbody>
+        </table>
+        <p id="actionMessage"></p>
+      </div>
+
+      <div class="card" id="editorSection" style="display: none;">
+        <h2 id="editorTitle">Edit File</h2>
+        <textarea id="fileEditor" rows="14"></textarea>
+        <div style="margin-top: 12px;">
+          <button id="saveFileBtn">Save Changes</button>
+          <button id="exitEditBtn" type="button">Exit</button>
+        </div>
+        <p id="editorMessage"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/script.js"></script>
+</body>
+</html>
