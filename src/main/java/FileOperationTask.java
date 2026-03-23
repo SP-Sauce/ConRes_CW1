@@ -16,7 +16,14 @@ public class FileOperationTask extends Thread {
         if ("read".equalsIgnoreCase(action)) {
             fileAccessManager.readFile(user);
         } else if ("write".equalsIgnoreCase(action)) {
-            fileAccessManager.writeFile(user, content);
+            boolean writeSuccess = fileAccessManager.writeFile(user, content);
+            if (writeSuccess){
+                System.out.println(user + " successfully wrote to the file.");
+            }
+            else{
+                System.out.println(user + " failed to write to the file.");
+            }
+            
         }
     }
 }

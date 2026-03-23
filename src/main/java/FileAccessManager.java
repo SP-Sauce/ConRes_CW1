@@ -7,6 +7,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.TimeUnit;
 
 public class FileAccessManager {
     private final Path filePath;
@@ -112,9 +113,6 @@ public class FileAccessManager {
     }
 
     public synchronized String getWriteReservationStatus() {
-        // if (reservedWriter != null) {
-        // return "Write Reserved By: " + reservedWriter;
-        // }
         if (!writeWaitingQueue.isEmpty()) {
             return "Write Queue: " + writeWaitingQueue.stream().map(User::getId).toList();
         }
@@ -145,18 +143,24 @@ public class FileAccessManager {
         }
     }
 
-    public void writeFile(User user, String newContent) {
+    public boolean writeFile(User user, String newContent) {
         if (!hasWriteReservation(user.getId())) {
             System.out.println(user + " attempted WRITE without reservation.");
-            return;
+            return false;
         }
-
-        lock.writeLock().lock();
-        setWriter(user.getId());
-
+        boolean acquired = false;
+        boolean writerSet = false;
         try {
+            acquired = lock.writeLock().tryLock(10, TimeUnit.SECONDS);
+            if (!acquired){
+                System.out.println(user + " failed to acquire write lock within timeout.");
+                return false;
+            }
+            setWriter(user.getId());
+            writerSet = true;
             System.out.println(user + " is WRITING to the file...");
             printFileState();
+            
             Files.writeString(
                     filePath,
                     newContent + System.lineSeparator(),
@@ -164,13 +168,23 @@ public class FileAccessManager {
                     StandardOpenOption.WRITE);
 
             System.out.println(user + " finished WRITING.");
-
-        } catch (IOException e) {
+            return true;
+        } catch(InterruptedException e){
+            Thread.currentThread().interrupt();
+            System.out.println(user + " was interrupted while waiting for lock.");
+            return false;
+        } 
+        catch (IOException e) {
             System.out.println("Write error for " + user + ": " + e.getMessage());
+            return false;
         } finally {
-            clearWriter();
+            if (writerSet ==  true){
+                clearWriter();
+            }
             printFileState();
-            lock.writeLock().unlock();
+            if (acquired){
+                lock.writeLock().unlock();
+            }
         }
     }
 

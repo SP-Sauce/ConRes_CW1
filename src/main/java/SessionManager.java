@@ -7,7 +7,7 @@ import java.util.stream.Collectors;
 public class SessionManager {
     private final Semaphore loginSemaphore;
     private final BlockingQueue<UserRequest> waitingQueue;
-    private final ConcurrentHashMap<Integer, User> activeSessions;
+    private final ConcurrentHashMap<Integer, UserSession> activeSessions;
     private final FileAccessManager fileAccessManager;
 
     public SessionManager(int maxConcurrentUsers, FileAccessManager fileAccessManager) {
@@ -18,6 +18,7 @@ public class SessionManager {
     }
 
     public synchronized boolean requestLogin(User user) {
+       
         if (user == null) {
             return false;
         }
@@ -29,8 +30,11 @@ public class SessionManager {
 
         boolean acquired = loginSemaphore.tryAcquire();
 
-        if (acquired) {
-            activeSessions.put(user.getId(), user);
+        if (acquired) { 
+            UserSession session = new UserSession(user);
+            activeSessions.put(user.getId(), session);
+            session.start();
+           
             System.out.println(user + " logged in successfully.");
             printSystemState();
             return true;
@@ -47,11 +51,13 @@ public class SessionManager {
     }
 
     public synchronized void logout(User user) {
-        if (!activeSessions.containsKey(user.getId())) {
+        UserSession session = activeSessions.remove(user.getId());
+        
+        if (session == null){
             return;
         }
 
-        activeSessions.remove(user.getId());
+        session.terminate();
         loginSemaphore.release();
         System.out.println(user + " logged out.");
         promoteNextUser();
@@ -64,7 +70,9 @@ public class SessionManager {
             boolean acquired = loginSemaphore.tryAcquire();
             if (acquired) {
                 User nextUser = nextRequest.getUser();
-                activeSessions.put(nextUser.getId(), nextUser);
+                UserSession session = new UserSession(nextUser);
+                activeSessions.put(nextUser.getId(), session);
+                session.start();
                 System.out.println(nextUser + " moved from waiting queue to active users.");
             } else {
                 waitingQueue.offer(nextRequest);
@@ -83,7 +91,7 @@ public class SessionManager {
 
     public synchronized String getActiveUsersJson() {
         return activeSessions.values().stream()
-                .map(user -> "\"" + user.toString() + "\"")
+                .map(session -> "\"" + session.getUser().toString() + "\"")
                 .collect(Collectors.joining(",", "[", "]"));
     }
 
