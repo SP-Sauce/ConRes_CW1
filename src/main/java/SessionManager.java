@@ -18,7 +18,6 @@ public class SessionManager {
     }
 
     public synchronized String requestLogin(User user) {
-       
         if (user == null) {
             return "INVALID_USER";
         }
@@ -28,19 +27,19 @@ public class SessionManager {
             return "ALREADY_LOGGED_IN";
         }
 
-        if (isUserWaiting(user.getId())){
+        if (isUserWaiting(user.getId())) {
             System.out.println(user + " is already in the waiting queue.");
             printSystemState();
-            return "WAITING:"+getWaitingPosition(user.getId());
+            return "WAITING:" + getWaitingPosition(user.getId());
         }
 
         boolean acquired = loginSemaphore.tryAcquire();
 
-        if (acquired) { 
-            UserSession session = new UserSession(user);
+        if (acquired) {
+            UserSession session = new UserSession(user, fileAccessManager);
             activeSessions.put(user.getId(), session);
             session.start();
-           
+
             System.out.println(user + " logged in successfully.");
             printSystemState();
             return "LOGIN_SUCCESS";
@@ -48,7 +47,7 @@ public class SessionManager {
             waitingQueue.offer(new UserRequest(user, "waiting"));
             System.out.println(user + " added to waiting queue.");
             printSystemState();
-            return "WAITING:"+getWaitingPosition(user.getId());
+            return "WAITING:" + getWaitingPosition(user.getId());
         }
     }
 
@@ -56,18 +55,22 @@ public class SessionManager {
         return activeSessions.containsKey(userId);
     }
 
+    public synchronized UserSession getSession(int userId) {
+        return activeSessions.get(userId);
+    }
+
     public synchronized void logout(User user) {
         UserSession session = activeSessions.remove(user.getId());
-        
-        if (session == null){
+
+        if (session == null) {
             return;
         }
 
-        
         fileAccessManager.releaseReadAccess(user);
         fileAccessManager.releaseWriteReservation(user);
         session.terminate();
         loginSemaphore.release();
+
         System.out.println(user + " logged out.");
         promoteNextUser();
         printSystemState();
@@ -75,13 +78,16 @@ public class SessionManager {
 
     private synchronized void promoteNextUser() {
         UserRequest nextRequest = waitingQueue.poll();
+
         if (nextRequest != null) {
             boolean acquired = loginSemaphore.tryAcquire();
+
             if (acquired) {
                 User nextUser = nextRequest.getUser();
-                UserSession session = new UserSession(nextUser);
+                UserSession session = new UserSession(nextUser, fileAccessManager);
                 activeSessions.put(nextUser.getId(), session);
                 session.start();
+
                 System.out.println(nextUser + " moved from waiting queue to active users.");
             } else {
                 waitingQueue.offer(nextRequest);
